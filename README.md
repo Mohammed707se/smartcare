@@ -1,8 +1,5 @@
-Here's a short and enthusiastic `README.md` file with emojis for your SmartCare project:
 
----
-
-# 🌟 **SmartCare** 🌟  
+# **SmartCare**
 🚀 *Revolutionizing residential customer service with AI and innovation!*  
 
 ---
