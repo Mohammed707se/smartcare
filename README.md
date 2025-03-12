@@ -1,6 +1,4 @@
-Here's a short and enthusiastic `README.md` file with emojis for your SmartCare project:
 
----
 
 # 🌟 **SmartCare** 🌟  
 🚀 *Revolutionizing residential customer service with AI and innovation!*  
@@ -23,7 +21,7 @@ SmartCare is a cutting-edge platform that uses AI and deep learning to enhance r
 ## 🚀 **Getting Started**  
 1. Clone the repository:  
    ```bash
-   git clone https://github.com/yourusername/smartcare.git
+   git clone https://github.com/Mohammed707se/smartcare.git
    ```  
 2. Install Flutter dependencies:  
    ```bash
