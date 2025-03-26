@@ -6,6 +6,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'dart:io'; // تأكد من إضافة هذا الاستيراد
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:typed_data';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -22,6 +24,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // متغير لحفظ الصورة المختارة
   XFile? _selectedImage;
+  Uint8List? _selectedImageBytes; // متغير جديد لتخزين بايتات الصورة على الويب
 
   // قائمة الكلمات المفتاحية
   final List<String> _keywords = [
@@ -44,9 +47,6 @@ class _ChatScreenState extends State<ChatScreen> {
   // لتغيير hintText بناءً على حالة التطبيق
   String _inputHint = 'Type a message...';
 
-  final String _apiKey =
-      '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';
-
   // قائمة أرقام الطلبات الوهمية
   final List<String> _mockRequestNumbers = [
     '12345',
@@ -54,6 +54,10 @@ class _ChatScreenState extends State<ChatScreen> {
   ];
 
   Future<File?> _compressImage(File file) async {
+    if (kIsWeb) {
+      // لا نقوم بضغط الصورة على الويب
+      return file;
+    }
     final compressedFile = await FlutterImageCompress.compressAndGetFile(
       file.absolute.path,
       '${file.parent.path}/temp_${file.path.split('/').last}',
@@ -115,131 +119,45 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     try {
-      // إعداد الرسائل لإرسالها إلى API
-      List<Map<String, dynamic>> chatMessages = List.from(_messages.map((msg) {
-        if (msg['isUser']) {
-          return {'role': 'user', 'content': msg['text']};
-        } else {
-          return {'role': 'assistant', 'content': msg['text']};
-        }
-      }));
+      // تحضير البيانات للإرسال للباكيند
+      Map<String, dynamic> requestBody = {};
+
+      // إضافة النص إذا وجد
+      if (text != null && text.isNotEmpty) {
+        requestBody['text'] = text;
+      }
 
       // إضافة الصورة إذا وجدت
       if (image != null) {
-        final bytes = await image.readAsBytes();
-        final base64Image = base64Encode(bytes);
-        chatMessages.add({
-          'role': 'user',
-          'content': "Image: data:image/png;base64,$base64Image"
-        });
+        Uint8List imageBytes;
+        if (kIsWeb) {
+          imageBytes = await image.readAsBytes();
+        } else {
+          final bytes = await image.readAsBytes();
+          imageBytes = bytes;
+        }
+        final base64Image = base64Encode(imageBytes);
+        requestBody['image'] = base64Image;
       }
 
+      // إضافة معرف المستخدم (اختياري)
+      // requestBody['userId'] = 'user_id_here'; // يمكن إضافة معرف المستخدم إذا كان متاحًا
+
+      // الاتصال بالباكيند
       final response = await http.post(
-        Uri.parse('https://api.openai.com/v1/chat/completions'),
+        Uri.parse(
+            'https://21f7-46-153-121-70.ngrok-free.app/chat'), // قم بتغيير الرابط إلى عنوان الباكيند الخاص بك
+        // 'https://smart-care-backend-i2pg.onrender.com/chat'), // قم بتغيير الرابط إلى عنوان الباكيند الخاص بك
         headers: {
-          'Authorization': 'Bearer $_apiKey',
           'Content-Type': 'application/json',
         },
-        body: jsonEncode({
-          'model': 'gpt-4o-mini',
-          'messages': [
-            {
-              'role': 'system',
-              'content': '''
-انت خدمة عملاء لشركة روشن العقارية. مهمتك هي الرد على استفسارات العملاء المتعلقة بمشاكل العقارات والصور الخاصة بالعقارات فقط، بالإضافة إلى طلبات تتبع الطلبات. يجب عليك تقديم حلول فعّالة للمشاكل ورفع طلبات الشكاوى والاستفسارات إلى الأقسام المختصة. تأكد من التحدث بلغة مهذبة واحترافية، وكن مستمعًا جيدًا لمشاكل العملاء لضمان رضاهم التام.
-**مهمة إضافية:** قم بالرد بنفس اللغة التي يتحدث بها المستخدم مثلاً لو ارسل Track my request قم بالاجابة بالانقليزي.
-
-### **معلومات عن شركة روشن:**
-
-#### **نحن روشن:**
-- **الموقع العربي:** [www.roshn.sa/ar](http://www.roshn.sa/ar)
-- **الموقع الإنجليزي:** [www.roshn.sa/en](http://www.roshn.sa/en)
-- **رقم الدعم الفني الذكي:** +1 318 523 4059
-
-#### **كلمات من القيادة:**
-- **كلمة صاحب السمو الملكي الأمير محمد بن سلمان ولي العهد:**
-  طموحنا أن نبني وطناً أكثر ازدهاراً، يجد فيه كل مواطن ما يتمناه، فمستقبل وطننا الذي نبنيه معاً، لن نقبل إلا أن نجعله في مقدمة دول العالم.
-
-#### **عن روشن:**
-- **مجموعة روشن المطور العقاري الرائد** متعدد الأصول في المملكة العربية السعودية، وإحدى شركات صندوق الاستثمارات العامة.
-- **رؤيتنا:** تحقيق التناغم بين الإنسان والمكان بما ينسجم مع نمط الحياة العصري.
-- **رسالتنا:** تطوير وجهات متكاملة تعزز من جودة الحياة وتثري الترابط بين الإنسان والمكان.
-- **قيمنا:**
-  - الإنسان أولاً
-  - الريادة بتميز
-  - العمل بمسؤولية
-  - نلهم الأجيال
-  - التنوع بتناغم
-  - المسؤولية الاجتماعية
-
-#### **تنوع مشاريعنا:**
-1. **الأصول الأساسية:** المجتمعات السكنية، المكاتب التجارية، مراكز التجزئة، الفنادق والضيافة.
-2. **الأصول الداعمة:** التعليم، المساجد، الرعاية الصحية.
-3. **الأصول الواعدة:** النقل والخدمات اللوجستية، الرياضة، الترفيه.
-
-#### **الجوائز والشهادات:**
-- **أفضل بيئة عمل 2023** من منظمة Best Places to Work.
-- **جوائز تجربة العملاء السعودية 2024:** فئة "العملاء أولاً" و "أفضل تجربة العملاء في قطاع العقار".
-- **جوائز Middle East Construction Week 2022:** فئتا "أفضل مبادرة للمسؤولية الاجتماعية للشركات" و "أفضل مشروع سكني".
-- **شهادات ISO 2023:** تشمل ISO 37000، ISO 31000، ISO 9001، ISO 10002، ISO 22301، ISO 27001، ISO 37101، ISO 37106، ISO 45001، ISO 10003، ISO 10004.
-
-#### **مسؤوليتنا الاجتماعية:**
-- **برنامج "يحييك":** يركز على تنمية المجتمع، الاستدامة البيئية، التعليم والابتكار، الفنون والثقافة، والصحة العامة.
-- **مبادراتنا:** تساهم في رفع جودة الحياة وترك أثر إيجابي مستدام في المجتمع.
-
-#### **مجتمعاتنا:**
-- **سدرة، العروس، وارفة، المنار، الدانة، الفلوة:** مجتمعات سكنية متكاملة تلبي كافة احتياجات السكان من وحدات سكنية ومرافق وخدمات متنوعة.
-
-#### **رؤية السعودية 2030:**
-- **مساهمة روشن:** دعم برامج الإسكان الوطني، جودة الحياة، وصندوق الاستثمارات العامة لتحقيق أهداف رؤية السعودية 2030.
-
-#### **روابط التواصل الاجتماعي:**
-- [LinkedIn](https://www.linkedin.com/company/roshnksa)
-- [X (Twitter)](https://x.com/roshnksa)
-- [Instagram](https://www.instagram.com/roshnksa/)
-
-#### **رقم الدعم الفني الذكي:**
-- **+1 318 523 4059**
-
-### **توجيهات إضافية:**
-
-1. **التعامل مع الاستفسارات:**
-   - **مشكلة في العقار:** اجمع المعلومات اللازمة مثل رقم الوحدة، موقع العقار، وطبيعة المشكلة. قدم حلاً أو اشرح الخطوات التالية.
-   - **طلب صور للعقار:** زوّد العميل بالصور المطلوبة أو ارشده إلى القسم المختص.
-   - **تتبع الطلب:** عندما يطلب العميل تتبع طلب برقم معين، تحقق مما إذا كان الرقم موجودًا في بياناتك الوهمية وقدم التفاصيل المناسبة.
-### **بيانات تتبع الطلبات الوهمية:**
-- **طلب رقم 12345:**
-  - **الحالة:** قيد المعالجة
-  - **التاريخ المتوقع للانتهاء:** 2024-12-15
-  - **الوصف:** طلب صيانة لمشكلة تسرب المياه في الوحدة رقم 45 في مجتمع سدرة.
-
-- **طلب رقم 67890:**
-  - **الحالة:** مكتمل
-  - **التاريخ:** 2024-11-10
-  - **الوصف:** طلب تتبع دفع الإيجار للوحدة رقم 12 في مجتمع العروس.
-
-### **مثال على الرد:**
-
-**سؤال العميل:**
-"Track my request 12345"
-
-**رد خدمة العملاء:**
-"شكرًا لتواصلك مع روشن. حالة طلبك رقم 12345 هي قيد المعالجة، والتاريخ المتوقع للانتهاء هو 2024-12-15. سيتم إرسال فريق الصيانة المختص إلى وحدتك رقم 45 في مجتمع سدرة لحل مشكلة تسرب المياه. إذا كان لديك أي استفسارات إضافية، لا تتردد في الاتصال بنا على الرقم الذكي +1 318 523 4059."
-'''
-            },
-            ...chatMessages,
-          ],
-        }),
+        body: jsonEncode(requestBody),
       );
-
-      print(chatMessages);
 
       if (response.statusCode == 200) {
         final data = jsonDecode(utf8.decode(response.bodyBytes));
 
-        final aiResponse = data['choices'] != null && data['choices'].isNotEmpty
-            ? data['choices'][0]['message']['content']
-            : 'No response from AI';
+        final aiResponse = data['message'] ?? 'No response from AI';
 
         setState(() {
           if (_loadingMessageIndex != null) {
@@ -277,11 +195,62 @@ class _ChatScreenState extends State<ChatScreen> {
       setState(() {
         _isSending = false;
         _selectedImage = null;
+        _selectedImageBytes = null;
       });
       // إيقاف المؤقت بعد الانتهاء
       _loadingTimer?.cancel();
       _loadingTimer = null;
       _currentDot = 0;
+    }
+  }
+
+// Optional: Add this method for tracking requests through the backend endpoint
+  Future<void> _trackRequest(String requestNumber) async {
+    try {
+      final response = await http.post(
+        Uri.parse('https://21f7-46-153-121-70.ngrok-free.app/track-request'),
+        // Uri.parse('https://smart-care-backend-i2pg.onrender.com/track-request'),
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'requestNumber': requestNumber,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(utf8.decode(response.bodyBytes));
+
+        if (data['status'] == 'success') {
+          final requestData = data['data'];
+
+          String statusMessage = '';
+          if (requestData['status'] == 'قيد المعالجة') {
+            statusMessage =
+                'حالة طلبك رقم $requestNumber هي قيد المعالجة، والتاريخ المتوقع للانتهاء هو ${requestData['expectedDate']}. ${requestData['description']}';
+          } else {
+            statusMessage =
+                'تم اكتمال طلبك رقم $requestNumber بتاريخ ${requestData['completionDate']}. ${requestData['description']}';
+          }
+
+          // إضافة الرد لقائمة الرسائل
+          setState(() {
+            _messages.add({'text': statusMessage, 'isUser': false});
+          });
+        } else {
+          setState(() {
+            _messages.add({'text': 'حدث خطأ في تتبع الطلب', 'isUser': false});
+          });
+        }
+      } else {
+        setState(() {
+          _messages.add({'text': 'رقم الطلب غير موجود', 'isUser': false});
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add({'text': 'فشل الاتصال بالخادم', 'isUser': false});
+      });
     }
   }
 
@@ -313,22 +282,32 @@ class _ChatScreenState extends State<ChatScreen> {
     final image = await _picker.pickImage(source: ImageSource.gallery);
     if (image == null) return;
 
-    File imageFile = File(image.path);
-
-    // ضغط الصورة
-    File? compressedImage = await _compressImage(imageFile);
-
-    if (compressedImage != null) {
+    if (kIsWeb) {
+      // على الويب، نستخدم بايتات الصورة مباشرة
+      final bytes = await image.readAsBytes();
       setState(() {
-        _selectedImage = XFile(compressedImage.path);
+        _selectedImage = image;
+        _selectedImageBytes = bytes;
       });
       await _sendMessage(image: _selectedImage);
     } else {
-      // إذا فشل الضغط، استخدم الصورة الأصلية
-      setState(() {
-        _selectedImage = image;
-      });
-      await _sendMessage(image: _selectedImage);
+      File imageFile = File(image.path);
+
+      // ضغط الصورة
+      File? compressedImage = await _compressImage(imageFile);
+
+      if (compressedImage != null) {
+        setState(() {
+          _selectedImage = XFile(compressedImage.path);
+        });
+        await _sendMessage(image: _selectedImage);
+      } else {
+        // إذا فشل الضغط، استخدم الصورة الأصلية
+        setState(() {
+          _selectedImage = image;
+        });
+        await _sendMessage(image: _selectedImage);
+      }
     }
   }
 
@@ -336,6 +315,7 @@ class _ChatScreenState extends State<ChatScreen> {
   void _removeSelectedImage() {
     setState(() {
       _selectedImage = null;
+      _selectedImageBytes = null;
     });
   }
 
@@ -370,17 +350,17 @@ class _ChatScreenState extends State<ChatScreen> {
       if (selectedNumber != null) {
         setState(() {
           _isKeywordSelected = true;
-          _isTrackingRequest = true;
-          _inputHint = 'Enter your request number...';
+          _isTrackingRequest =
+              false; // تغيير ليصبح false لأننا سنستخدم الباكيند مباشرة
+          _inputHint = 'Type a message...';
           // إضافة رسالة توضيحية في الدردشة
           _messages.add({
             'text': 'Tracking request number: $selectedNumber',
             'isUser': true
           });
         });
-        // إرسال رسالة تتبع الطلب مع رقم الطلب
-        String trackMessage = 'Track my request $selectedNumber';
-        await _sendMessage(text: trackMessage);
+        // استخدام الدالة الجديدة لتتبع الطلبات
+        await _trackRequest(selectedNumber);
       }
     } else {
       setState(() {
@@ -418,12 +398,19 @@ class _ChatScreenState extends State<ChatScreen> {
                 padding: EdgeInsets.all(8.0),
                 child: Stack(
                   children: [
-                    Image.file(
-                      File(_selectedImage!.path),
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                    ),
+                    kIsWeb && _selectedImageBytes != null
+                        ? Image.memory(
+                            _selectedImageBytes!,
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          )
+                        : Image.file(
+                            File(_selectedImage!.path),
+                            width: 100,
+                            height: 100,
+                            fit: BoxFit.cover,
+                          ),
                     Positioned(
                       right: -10,
                       top: -10,

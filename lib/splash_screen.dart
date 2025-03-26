@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math';
 
 import 'package:smartcare/app_colors.dart';
-import 'package:smartcare/home_screen.dart';
+import 'package:smartcare/login_screen.dart'; // Cambiado de home_screen.dart a login_screen.dart
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -70,11 +70,13 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _circleController, curve: Curves.easeInOut),
     );
 
-    // الاستماع لنهاية أنيميشن الدائرة للانتقال إلى الصفحة الرئيسية
+    // الاستماع لنهاية أنيميشن الدائرة للانتقال إلى صفحة تسجيل الدخول
     _circleController.addStatusListener((status) {
       if (status == AnimationStatus.completed) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
+          MaterialPageRoute(
+              builder: (context) =>
+                  const LoginScreen()), // Cambiado a LoginScreen
         );
       }
     });
