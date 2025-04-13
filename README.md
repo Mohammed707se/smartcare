@@ -27,11 +27,7 @@ SmartCare is a cutting-edge platform that uses AI and deep learning to enhance r
    ```bash
    flutter pub get
    ```  
-3. Start the backend server:  
-   ```bash
-   node server.js
-   ```  
-4. Run the app:  
+3. Run the app:  
    ```bash
    flutter run
    ```  
@@ -43,15 +39,4 @@ SmartCare is a cutting-edge platform that uses AI and deep learning to enhance r
 - ✅ Saves time and reduces costs.  
 - ✅ Leverages advanced AI technology for smart living.  
 
----
 
-## 📜 **License**  
-This project is licensed under the [MIT License](LICENSE).  
-
----
-
-🎉 **Join us in creating smarter communities!**  
-
---- 
-
-Feel free to add specific details like sponsor logos or additional instructions if needed!
