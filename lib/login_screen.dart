@@ -1,7 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:smartcare/app_colors.dart';
 import 'package:smartcare/home_screen.dart';
 import 'package:smartcare/register_screen.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -16,6 +21,132 @@ class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController _passwordController = TextEditingController();
   bool _isObscure = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
+
+  Future<void> _login() async {
+    final String apiUrl =
+        'https://smart-care-backend-i2pg.onrender.com/auth/login';
+
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        print('Attempting to connect to: $apiUrl');
+        final response = await http.post(
+          Uri.parse(apiUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'ngrok-skip-browser-warning': 'true'
+          },
+          body: json.encode({
+            'email': _emailController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (response.statusCode == 200) {
+          final responseData = json.decode(response.body);
+          print(responseData);
+
+          if (responseData['status'] == 'success') {
+            // حفظ بيانات المستخدم في التخزين المحلي
+            final prefs = await SharedPreferences.getInstance();
+            await prefs.setString('token', responseData['data']['token']);
+            await prefs.setString('userId', responseData['data']['userId']);
+            await prefs.setString(
+                'firstName', responseData['data']['firstName']);
+            await prefs.setString('lastName', responseData['data']['lastName']);
+            await prefs.setString('email', responseData['data']['email']);
+            await prefs.setString(
+                'community', responseData['data']['community']);
+            await prefs.setString(
+                'unitNumber', responseData['data']['unitNumber']);
+            await prefs.setString('phone', responseData['data']['phone']);
+
+            // حفظ حالة تذكرني إذا تم اختيارها
+            if (_rememberMe) {
+              await prefs.setBool('rememberMe', true);
+              await prefs.setString('savedEmail', _emailController.text);
+            } else {
+              await prefs.setBool('rememberMe', false);
+              await prefs.remove('savedEmail');
+            }
+
+            // عرض رسالة نجاح
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Login successful!'),
+                backgroundColor: AppColors.successColor,
+              ),
+            );
+
+            // الانتقال إلى الشاشة الرئيسية
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => HomeScreen()),
+            );
+          } else {
+            print(responseData);
+            // عرض رسالة الخطأ
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(responseData['message'] ?? 'Login failed'),
+                backgroundColor: AppColors.errorColor,
+              ),
+            );
+          }
+        } else {
+          // عرض رسالة الخطأ في حالة فشل الاتصال
+          final responseData = json.decode(response.body);
+          print(responseData);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(responseData['message'] ?? 'Login failed'),
+              backgroundColor: AppColors.errorColor,
+            ),
+          );
+        }
+      } catch (e) {
+        print('$e');
+        setState(() {
+          _isLoading = false;
+        });
+
+        // عرض رسالة الخطأ في حالة حدوث استثناء
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection error. Please try again.'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    }
+  }
+
+  // التحقق من حالة تذكرني عند بدء التطبيق
+  Future<void> _checkRememberMe() async {
+    final prefs = await SharedPreferences.getInstance();
+    final rememberMe = prefs.getBool('rememberMe') ?? false;
+
+    if (rememberMe) {
+      setState(() {
+        _rememberMe = true;
+        _emailController.text = prefs.getString('savedEmail') ?? '';
+      });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkRememberMe();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -85,7 +216,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       if (value == null || value.isEmpty) {
                         return 'Please enter your email';
                       }
-                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
+                      if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                          .hasMatch(value)) {
                         return 'Please enter a valid email';
                       }
                       return null;
@@ -180,15 +312,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate()) {
-                          // Demo login - Navigate to HomeScreen
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(builder: (context) => HomeScreen()),
-                          );
-                        }
-                      },
+                      onPressed: _isLoading ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.titleColor,
                         foregroundColor: Colors.white,
@@ -196,13 +320,15 @@ class _LoginScreenState extends State<LoginScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: Text(
-                        'Login',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'Login',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                   SizedBox(height: 20),

@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:smartcare/app_colors.dart';
 import 'package:smartcare/login_screen.dart';
 
@@ -24,6 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _isObscurePassword = true;
   bool _isObscureConfirmPassword = true;
   bool _agreeToTerms = false;
+  bool _isLoading = false;
 
   // List of communities
   final List<String> _communities = [
@@ -37,6 +41,100 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   // Selected community
   String? _selectedCommunity;
+  // قم بتحديث هذا الرابط
+
+  // دالة للتسجيل
+  Future<void> _register() async {
+    final String apiUrl =
+        'https://smart-care-backend-i2pg.onrender.com/auth/register';
+    if (_formKey.currentState!.validate() && _agreeToTerms) {
+      setState(() {
+        _isLoading = true;
+      });
+
+      try {
+        // تجهيز رقم الهاتف مع رمز البلد
+        String phone = _phoneController.text;
+        if (phone.startsWith('0')) {
+          phone = phone.substring(1);
+        }
+
+        final response = await http.post(
+          Uri.parse(apiUrl),
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'firstName': _firstNameController.text,
+            'lastName': _lastNameController.text,
+            'email': _emailController.text,
+            'phone': phone,
+            'community': _selectedCommunity,
+            'unitNumber': _unitNumberController.text,
+            'password': _passwordController.text,
+          }),
+        );
+
+        setState(() {
+          _isLoading = false;
+        });
+
+        if (response.statusCode == 201) {
+          final responseData = json.decode(response.body);
+
+          if (responseData['status'] == 'success') {
+            // عرض رسالة نجاح
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Registration successful! Please login.'),
+                backgroundColor: AppColors.successColor,
+              ),
+            );
+
+            // الانتقال إلى شاشة تسجيل الدخول
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => LoginScreen()),
+            );
+          } else {
+            // عرض رسالة الخطأ
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(responseData['message'] ?? 'Registration failed'),
+                backgroundColor: AppColors.errorColor,
+              ),
+            );
+          }
+        } else {
+          // عرض رسالة الخطأ في حالة فشل الاتصال
+          final responseData = json.decode(response.body);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(responseData['message'] ?? 'Registration failed'),
+              backgroundColor: AppColors.errorColor,
+            ),
+          );
+        }
+      } catch (e) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // عرض رسالة الخطأ في حالة حدوث استثناء
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Connection error. Please try again.'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
+    } else if (!_agreeToTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please agree to the terms and conditions'),
+          backgroundColor: AppColors.errorColor,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -407,37 +505,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: () {
-                        if (_formKey.currentState!.validate() &&
-                            _agreeToTerms) {
-                          // Prepare phone number with country code
-                          String fullPhoneNumber =
-                              '+966${_phoneController.text}';
-
-                          // Demo registration - Navigate to LoginScreen
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Registration successful! Please login.'),
-                              backgroundColor: AppColors.successColor,
-                            ),
-                          );
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => LoginScreen(),
-                            ),
-                          );
-                        } else if (!_agreeToTerms) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Please agree to the terms and conditions'),
-                              backgroundColor: AppColors.errorColor,
-                            ),
-                          );
-                        }
-                      },
+                      onPressed: _isLoading ? null : _register,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.titleColor,
                         foregroundColor: Colors.white,
@@ -445,13 +513,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: Text(
-                        'Create Account',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                      child: _isLoading
+                          ? CircularProgressIndicator(color: Colors.white)
+                          : Text(
+                              'Create Account',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
                     ),
                   ),
                   SizedBox(height: 20),

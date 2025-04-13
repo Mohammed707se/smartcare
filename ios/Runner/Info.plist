@@ -2,28 +2,16 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>نحتاج الوصول الى الصور ليمكنك رفع الصورة</string>
-	<key>NSCameraUsageDescription</key>
-	<string>نحتاج الوصول الى الكميرا لتصوير صورة</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>نحتاج إلى الوصول إلى الميكروفون لتسجيل الصوت.</string>
-	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>نحتاج إلى استخدام التعرف على الصوت لتحويل كلامك إلى نص</string>
-	<key>NSAppTransportSecurity</key>
-	<dict>
-		<key>NSAllowsArbitraryLoads</key>
-		<true/>
-	</dict>
-	<key>LSApplicationQueriesSchemes</key>
+	<key>UIDeviceFamily</key>
 	<array>
-	<string>sms</string>
-	<string>tel</string>
+		<integer>1</integer>
 	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Smartcare</string>
+	<string>SmartCare Roshen</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -31,7 +19,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>smartcare</string>
+	<string>SmartCare Roshen</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -40,7 +28,27 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>sms</string>
+		<string>tel</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>نحتاج الوصول الى الكميرا لتصوير صورة</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>نحتاج إلى الوصول إلى الميكروفون لتسجيل الصوت.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>نحتاج الوصول الى الصور ليمكنك رفع الصورة</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>نحتاج إلى استخدام التعرف على الصوت لتحويل كلامك إلى نص</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
@@ -59,9 +67,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 </dict>
 </plist>

@@ -146,8 +146,8 @@ class _ChatScreenState extends State<ChatScreen> {
       // الاتصال بالباكيند
       final response = await http.post(
         Uri.parse(
-            'https://21f7-46-153-121-70.ngrok-free.app/chat'), // قم بتغيير الرابط إلى عنوان الباكيند الخاص بك
-        // 'https://smart-care-backend-i2pg.onrender.com/chat'), // قم بتغيير الرابط إلى عنوان الباكيند الخاص بك
+            // 'https://ce44-46-153-121-70.ngrok-free.app/chat'), // قم بتغيير الرابط إلى عنوان الباكيند الخاص بك
+            'https://smart-care-backend-i2pg.onrender.com/chat'), // قم بتغيير الرابط إلى عنوان الباكيند الخاص بك
         headers: {
           'Content-Type': 'application/json',
         },
@@ -208,8 +208,8 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _trackRequest(String requestNumber) async {
     try {
       final response = await http.post(
-        Uri.parse('https://21f7-46-153-121-70.ngrok-free.app/track-request'),
-        // Uri.parse('https://smart-care-backend-i2pg.onrender.com/track-request'),
+        // Uri.parse('https://ce44-46-153-121-70.ngrok-free.app/track-request'),
+        Uri.parse('https://smart-care-backend-i2pg.onrender.com/track-request'),
         headers: {
           'Content-Type': 'application/json',
         },
